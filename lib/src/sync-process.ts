@@ -4,14 +4,15 @@
 
 import {Subject} from 'rxjs';
 
-import {SyncProcess} from './sync-process';
+import {SyncProcess} from './sync-process/index';
 import {compilerPath} from './compiler-path';
+import {IEmbeddedProcess} from './types/compiler';
 
 /**
  * A synchronous wrapper for the embedded Sass compiler that exposes its stdio
  * streams as Observables.
  */
-export class SyncEmbeddedCompiler {
+export class SyncEmbeddedProcess implements IEmbeddedProcess {
   /** The underlying process that's being wrapped. */
   private readonly process = new SyncProcess(compilerPath, {windowsHide: true});
 

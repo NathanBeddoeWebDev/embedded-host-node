@@ -7,12 +7,13 @@ import {Observable} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 
 import {compilerPath} from './compiler-path';
+import {IEmbeddedProcess} from './types/compiler';
 
 /**
  * An asynchronous wrapper for the embedded Sass compiler that exposes its stdio
  * streams as Observables.
  */
-export class AsyncEmbeddedCompiler {
+export class AsyncEmbeddedProcess implements IEmbeddedProcess {
   /** The underlying process that's being wrapped. */
   private readonly process = spawn(compilerPath, {windowsHide: true});
 

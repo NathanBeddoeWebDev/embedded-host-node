@@ -21,6 +21,7 @@ import {
 } from './message-transformer';
 import {RequestTracker} from './request-tracker';
 import {PromiseOr, thenOr} from './utils';
+import {CompilerType} from './types/compiler';
 
 /**
  * Dispatches requests, responses, and events.
@@ -42,7 +43,7 @@ import {PromiseOr, thenOr} from './utils';
  * as an Observable that consumers may choose to subscribe to. Subscribers must
  * perform proper error handling.
  */
-export class Dispatcher<sync extends 'sync' | 'async'> {
+export class Dispatcher<sync extends CompilerType> {
   // Tracks the IDs of all inbound requests. An outbound response with matching
   // ID and type will remove the ID.
   private readonly pendingInboundRequests = new RequestTracker();
@@ -276,7 +277,7 @@ export class Dispatcher<sync extends 'sync' | 'async'> {
 /**
  * An interface for the handler callbacks that are passed to `new Dispatcher()`.
  */
-export interface DispatcherHandlers<sync extends 'sync' | 'async'> {
+export interface DispatcherHandlers<sync extends CompilerType> {
   handleImportRequest: (
     request: OutboundMessage.ImportRequest
   ) => PromiseOr<InboundMessage.ImportResponse, sync>;

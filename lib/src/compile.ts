@@ -8,7 +8,6 @@ import * as supportsColor from 'supports-color';
 
 import * as proto from './vendor/embedded-protocol/embedded_sass_pb';
 import * as utils from './utils';
-import {AsyncEmbeddedCompiler} from './async-compiler';
 import {CompileResult, Options, SourceSpan, StringOptions} from './vendor/sass';
 import {Dispatcher, DispatcherHandlers} from './dispatcher';
 import {Exception} from './exception';
@@ -16,13 +15,16 @@ import {FunctionRegistry} from './function-registry';
 import {ImporterRegistry} from './importer-registry';
 import {MessageTransformer} from './message-transformer';
 import {PacketTransformer} from './packet-transformer';
-import {SyncEmbeddedCompiler} from './sync-compiler';
 import {deprotofySourceSpan} from './deprotofy-span';
 import {legacyImporterProtocol} from './legacy/importer';
+import {CompilerType} from './types/compiler';
+import Compiler from './compiler';
+import {AsyncEmbeddedProcess} from './async-process';
+import {SyncEmbeddedProcess} from './sync-process';
 
 export function compile(
   path: string,
-  options?: Options<'sync'>
+  options?: Options<CompilerType.SYNC>
 ): CompileResult {
   const importers = new ImporterRegistry(options);
   return compileRequestSync(
@@ -34,7 +36,7 @@ export function compile(
 
 export function compileString(
   source: string,
-  options?: StringOptions<'sync'>
+  options?: StringOptions<CompilerType.SYNC>
 ): CompileResult {
   const importers = new ImporterRegistry(options);
   return compileRequestSync(
@@ -46,7 +48,7 @@ export function compileString(
 
 export function compileAsync(
   path: string,
-  options?: Options<'async'>
+  options?: Options<CompilerType.ASYNC>
 ): Promise<CompileResult> {
   const importers = new ImporterRegistry(options);
   return compileRequestAsync(
@@ -58,7 +60,7 @@ export function compileAsync(
 
 export function compileStringAsync(
   source: string,
-  options?: StringOptions<'async'>
+  options?: StringOptions<CompilerType.ASYNC>
 ): Promise<CompileResult> {
   const importers = new ImporterRegistry(options);
   return compileRequestAsync(
@@ -71,8 +73,8 @@ export function compileStringAsync(
 // Creates a request for compiling a file.
 function newCompilePathRequest(
   path: string,
-  importers: ImporterRegistry<'sync' | 'async'>,
-  options?: Options<'sync' | 'async'>
+  importers: ImporterRegistry<CompilerType>,
+  options?: Options<CompilerType>
 ): proto.InboundMessage.CompileRequest {
   const request = newCompileRequest(importers, options);
   request.setPath(path);
@@ -82,8 +84,8 @@ function newCompilePathRequest(
 // Creates a request for compiling a string.
 function newCompileStringRequest(
   source: string,
-  importers: ImporterRegistry<'sync' | 'async'>,
-  options?: StringOptions<'sync' | 'async'>
+  importers: ImporterRegistry<CompilerType>,
+  options?: StringOptions<CompilerType>
 ): proto.InboundMessage.CompileRequest {
   const input = new proto.InboundMessage.CompileRequest.StringInput();
   input.setSource(source);
@@ -113,8 +115,8 @@ function newCompileStringRequest(
 // Creates a compilation request for the given `options` without adding any
 // input-specific options.
 function newCompileRequest(
-  importers: ImporterRegistry<'sync' | 'async'>,
-  options?: Options<'sync' | 'async'>
+  importers: ImporterRegistry<CompilerType>,
+  options?: Options<CompilerType>
 ): proto.InboundMessage.CompileRequest {
   const request = new proto.InboundMessage.CompileRequest();
   request.setImportersList(importers.importers);
@@ -147,44 +149,40 @@ function newCompileRequest(
 // compilation errors. Shuts down the compiler after compilation.
 async function compileRequestAsync(
   request: proto.InboundMessage.CompileRequest,
-  importers: ImporterRegistry<'async'>,
-  options?: Options<'async'>
+  importers: ImporterRegistry<CompilerType.ASYNC>,
+  options?: Options<CompilerType.ASYNC>
 ): Promise<CompileResult> {
   const functions = new FunctionRegistry(options?.functions);
-  const embeddedCompiler = new AsyncEmbeddedCompiler();
+  const embeddedCompiler = new Compiler(CompilerType.ASYNC)
+    .process as AsyncEmbeddedProcess;
 
-  try {
-    const dispatcher = createDispatcher<'async'>(
-      embeddedCompiler.stdout$,
-      buffer => {
-        embeddedCompiler.writeStdin(buffer);
-      },
-      {
-        handleImportRequest: request => importers.import(request),
-        handleFileImportRequest: request => importers.fileImport(request),
-        handleCanonicalizeRequest: request => importers.canonicalize(request),
-        handleFunctionCallRequest: request => functions.call(request),
-      }
-    );
+  const dispatcher = createDispatcher<CompilerType.ASYNC>(
+    embeddedCompiler.stdout$,
+    buffer => {
+      embeddedCompiler.writeStdin(buffer);
+    },
+    {
+      handleImportRequest: request => importers.import(request),
+      handleFileImportRequest: request => importers.fileImport(request),
+      handleCanonicalizeRequest: request => importers.canonicalize(request),
+      handleFunctionCallRequest: request => functions.call(request),
+    }
+  );
 
-    dispatcher.logEvents$.subscribe(event => handleLogEvent(options, event));
+  dispatcher.logEvents$.subscribe(event => handleLogEvent(options, event));
 
-    return handleCompileResponse(
-      await new Promise<proto.OutboundMessage.CompileResponse>(
-        (resolve, reject) =>
-          dispatcher.sendCompileRequest(request, (err, response) => {
-            if (err) {
-              reject(err);
-            } else {
-              resolve(response!);
-            }
-          })
-      )
-    );
-  } finally {
-    embeddedCompiler.close();
-    await embeddedCompiler.exit$;
-  }
+  return handleCompileResponse(
+    await new Promise<proto.OutboundMessage.CompileResponse>(
+      (resolve, reject) =>
+        dispatcher.sendCompileRequest(request, (err, response) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(response!);
+          }
+        })
+    )
+  );
 }
 
 // Spins up a compiler, then sends it a compile request. Returns a promise that
@@ -192,60 +190,54 @@ async function compileRequestAsync(
 // compilation errors. Shuts down the compiler after compilation.
 function compileRequestSync(
   request: proto.InboundMessage.CompileRequest,
-  importers: ImporterRegistry<'sync'>,
-  options?: Options<'sync'>
+  importers: ImporterRegistry<CompilerType.SYNC>,
+  options?: Options<CompilerType.SYNC>
 ): CompileResult {
   const functions = new FunctionRegistry(options?.functions);
-  const embeddedCompiler = new SyncEmbeddedCompiler();
+  const embeddedCompiler = new Compiler(CompilerType.SYNC)
+    .process as SyncEmbeddedProcess;
 
-  try {
-    const dispatcher = createDispatcher<'sync'>(
-      embeddedCompiler.stdout$,
-      buffer => {
-        embeddedCompiler.writeStdin(buffer);
-      },
-      {
-        handleImportRequest: request => importers.import(request),
-        handleFileImportRequest: request => importers.fileImport(request),
-        handleCanonicalizeRequest: request => importers.canonicalize(request),
-        handleFunctionCallRequest: request => functions.call(request),
-      }
-    );
-
-    dispatcher.logEvents$.subscribe(event => handleLogEvent(options, event));
-
-    let error: unknown;
-    let response: proto.OutboundMessage.CompileResponse | undefined;
-    dispatcher.sendCompileRequest(request, (error_, response_) => {
-      if (error_) {
-        error = error_;
-      } else {
-        response = response_;
-      }
-    });
-
-    for (;;) {
-      if (!embeddedCompiler.yield()) {
-        throw utils.compilerError('Embedded compiler exited unexpectedly.');
-      }
-
-      if (error) throw error;
-      if (response) return handleCompileResponse(response);
+  const dispatcher = createDispatcher<CompilerType.SYNC>(
+    embeddedCompiler.stdout$,
+    buffer => {
+      embeddedCompiler.writeStdin(buffer);
+    },
+    {
+      handleImportRequest: request => importers.import(request),
+      handleFileImportRequest: request => importers.fileImport(request),
+      handleCanonicalizeRequest: request => importers.canonicalize(request),
+      handleFunctionCallRequest: request => functions.call(request),
     }
-  } finally {
-    embeddedCompiler.close();
-    embeddedCompiler.yieldUntilExit();
+  );
+
+  dispatcher.logEvents$.subscribe(event => handleLogEvent(options, event));
+
+  let error: unknown;
+  let response: proto.OutboundMessage.CompileResponse | undefined;
+  dispatcher.sendCompileRequest(request, (error_, response_) => {
+    if (error_) {
+      error = error_;
+    } else {
+      response = response_;
+    }
+  });
+
+  while (embeddedCompiler.yield()) {
+    if (error) throw error;
+    if (response) return handleCompileResponse(response);
   }
+
+  throw utils.compilerError('Embedded compiler exited unexpectedly.');
 }
 
 /**
  * Creates a dispatcher that dispatches messages from the given `stdout` stream.
  */
-function createDispatcher<sync extends 'sync' | 'async'>(
+function createDispatcher<T extends CompilerType>(
   stdout: Observable<Buffer>,
   writeStdin: (buffer: Buffer) => void,
-  handlers: DispatcherHandlers<sync>
-): Dispatcher<sync> {
+  handlers: DispatcherHandlers<T>
+): Dispatcher<T> {
   const packetTransformer = new PacketTransformer(stdout, writeStdin);
 
   const messageTransformer = new MessageTransformer(
@@ -253,7 +245,7 @@ function createDispatcher<sync extends 'sync' | 'async'>(
     packet => packetTransformer.writeInboundProtobuf(packet)
   );
 
-  return new Dispatcher<sync>(
+  return new Dispatcher<T>(
     messageTransformer.outboundMessages$,
     message => messageTransformer.writeInboundMessage(message),
     handlers
@@ -262,7 +254,7 @@ function createDispatcher<sync extends 'sync' | 'async'>(
 
 /** Handles a log event according to `options`. */
 function handleLogEvent(
-  options: Options<'sync' | 'async'> | undefined,
+  options: Options<CompilerType> | undefined,
   event: proto.OutboundMessage.LogEvent
 ): void {
   if (event.getType() === proto.LogEventType.DEBUG) {
