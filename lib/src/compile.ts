@@ -3,24 +3,24 @@
 // https://opensource.org/licenses/MIT.
 
 import * as p from 'path';
-import {Observable} from 'rxjs';
+import { Observable } from 'rxjs';
 import * as supportsColor from 'supports-color';
 
 import * as proto from './vendor/embedded-protocol/embedded_sass_pb';
 import * as utils from './utils';
-import {CompileResult, Options, SourceSpan, StringOptions} from './vendor/sass';
-import {Dispatcher, DispatcherHandlers} from './dispatcher';
-import {Exception} from './exception';
-import {FunctionRegistry} from './function-registry';
-import {ImporterRegistry} from './importer-registry';
-import {MessageTransformer} from './message-transformer';
-import {PacketTransformer} from './packet-transformer';
-import {deprotofySourceSpan} from './deprotofy-span';
-import {legacyImporterProtocol} from './legacy/importer';
-import {CompilerType} from './types/compiler';
-import Compiler from './compiler';
-import {AsyncEmbeddedProcess} from './async-process';
-import {SyncEmbeddedProcess} from './sync-process';
+import { CompileResult, Options, SourceSpan, StringOptions } from './vendor/sass';
+import { Dispatcher, DispatcherHandlers } from './dispatcher';
+import { Exception } from './exception';
+import { FunctionRegistry } from './function-registry';
+import { ImporterRegistry } from './importer-registry';
+import { MessageTransformer } from './message-transformer';
+import { PacketTransformer } from './packet-transformer';
+import { deprotofySourceSpan } from './deprotofy-span';
+import { legacyImporterProtocol } from './legacy/importer';
+import { CompilerType } from './types/compiler';
+import { Compiler } from './compiler/compiler';
+import { AsyncEmbeddedProcess } from './async-process';
+import { SyncEmbeddedProcess } from './sync-process';
 
 export function compile(
   path: string,
@@ -267,11 +267,11 @@ function handleLogEvent(
     }
   } else {
     if (options?.logger?.warn) {
-      const params: {deprecation: boolean; span?: SourceSpan; stack?: string} =
-        {
-          deprecation:
-            event.getType() === proto.LogEventType.DEPRECATION_WARNING,
-        };
+      const params: { deprecation: boolean; span?: SourceSpan; stack?: string } =
+      {
+        deprecation:
+          event.getType() === proto.LogEventType.DEPRECATION_WARNING,
+      };
 
       const spanProto = event.getSpan();
       if (spanProto) params.span = deprotofySourceSpan(spanProto);

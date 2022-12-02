@@ -3,34 +3,35 @@
 // https://opensource.org/licenses/MIT.
 
 import * as pkg from '../package.json';
-import {sassFalse, sassTrue} from './src/value/boolean';
-import {sassNull} from './src/value/null';
+import { sassFalse, sassTrue } from './src/value/boolean';
+import { sassNull } from './src/value/null';
 
-export {ListSeparator, SassList} from './src/value/list';
-export {SassArgumentList} from './src/value/argument-list';
-export {sassFalse, sassTrue} from './src/value/boolean';
-export {SassColor} from './src/value/color';
-export {SassFunction} from './src/value/function';
-export {SassMap} from './src/value/map';
-export {SassNumber} from './src/value/number';
-export {SassString} from './src/value/string';
-export {Value} from './src/value';
-export {sassNull} from './src/value/null';
+export { ListSeparator, SassList } from './src/value/list';
+export { SassArgumentList } from './src/value/argument-list';
+export { sassFalse, sassTrue } from './src/value/boolean';
+export { SassColor } from './src/value/color';
+export { SassFunction } from './src/value/function';
+export { SassMap } from './src/value/map';
+export { SassNumber } from './src/value/number';
+export { SassString } from './src/value/string';
+export { Value } from './src/value';
+export { sassNull } from './src/value/null';
 
 export * as types from './src/legacy/value';
-export {Exception} from './src/exception';
+export { Exception } from './src/exception';
 export {
   compile,
   compileString,
   compileAsync,
   compileStringAsync,
 } from './src/compile';
-export {render, renderSync} from './src/legacy';
+export { Compiler } from './src/compiler';
+export { render, renderSync } from './src/legacy';
 
 export const info = `sass-embedded\t${pkg.version}`;
 
 export const Logger = {
-  silent: {warn() {}, debug() {}},
+  silent: { warn() { }, debug() { } },
 };
 
 // Legacy JS API

@@ -2,12 +2,12 @@
 // MIT-style license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-import {defaults as initMakeFetchHappen} from 'make-fetch-happen';
+import { defaults as initMakeFetchHappen } from 'make-fetch-happen';
 import extractZip = require('extract-zip');
-import {promises as fs, existsSync, mkdirSync} from 'fs';
+import { promises as fs, existsSync, mkdirSync } from 'fs';
 import * as p from 'path';
 import * as shell from 'shelljs';
-import {extract as extractTar} from 'tar';
+import { extract as extractTar } from 'tar';
 
 import * as pkg from '../package.json';
 
@@ -68,14 +68,14 @@ export async function getEmbeddedProtocol(
   outPath: string,
   options?:
     | {
-        version: string;
-      }
+      version: string;
+    }
     | {
-        ref: string;
-      }
+      ref: string;
+    }
     | {
-        path: string;
-      }
+      path: string;
+    }
 ): Promise<void> {
   const repo = 'embedded-protocol';
 
@@ -118,14 +118,14 @@ export async function getDartSassEmbedded(
   outPath: string,
   options?:
     | {
-        version: string;
-      }
+      version: string;
+    }
     | {
-        ref: string;
-      }
+      ref: string;
+    }
     | {
-        path: string;
-      }
+      path: string;
+    }
 ): Promise<void> {
   const repo = 'dart-sass-embedded';
   options ??= defaultVersionOption('compiler-version');
@@ -182,7 +182,7 @@ async function checkForMusl(): Promise<void> {
  */
 export async function getJSApi(
   outPath: string,
-  options?: {ref: string} | {path: string}
+  options?: { ref: string } | { path: string }
 ): Promise<void> {
   const repo = 'sass';
 
@@ -211,6 +211,7 @@ async function downloadRelease(options: {
   console.log(`Downloading ${options.repo} release asset.`);
   const response = await fetch(options.assetUrl, {
     redirect: 'follow',
+    timeout: 100000000
   });
   if (!response.ok) {
     throw Error(
@@ -250,7 +251,7 @@ function fetchRepo(options: {
       --depth=1 \
       https://github.com/sass/${options.repo} \
       ${p.join(options.outPath, options.repo)}`,
-      {silent: true}
+      { silent: true }
     );
   }
 
@@ -278,7 +279,7 @@ function buildEmbeddedProtocol(repoPath: string): void {
     OS === 'windows'
       ? '%CD%/node_modules/.bin/protoc-gen-ts.cmd'
       : 'node_modules/.bin/protoc-gen-ts';
-  mkdirSync('build/embedded-protocol', {recursive: true});
+  mkdirSync('build/embedded-protocol', { recursive: true });
   shell.exec(
     `${protocPath} \
       --plugin="protoc-gen-ts=${pluginPath}" \
@@ -286,7 +287,7 @@ function buildEmbeddedProtocol(repoPath: string): void {
       --ts_out="build/embedded-protocol" \
       --proto_path="${repoPath}" \
       ${proto}`,
-    {silent: true}
+    { silent: true }
   );
 }
 
@@ -309,9 +310,9 @@ function buildDartSassEmbedded(repoPath: string): void {
 // option described by that field.
 function defaultVersionOption(
   pkgField: keyof typeof pkg
-): {version: string} | {ref: string} {
+): { version: string } | { ref: string } {
   const version = pkg[pkgField] as string;
-  return version.endsWith('-dev') ? {ref: 'main'} : {version};
+  return version.endsWith('-dev') ? { ref: 'main' } : { version };
 }
 
 // Links or copies the contents of `source` into `destination`.
@@ -329,9 +330,9 @@ async function link(source: string, destination: string): Promise<void> {
 
 // Ensures that `dir` does not exist, but its parent directory does.
 async function cleanDir(dir: string): Promise<void> {
-  await fs.mkdir(p.dirname(dir), {recursive: true});
+  await fs.mkdir(p.dirname(dir), { recursive: true });
   try {
-    await fs.rmdir(dir, {recursive: true});
+    await fs.rmdir(dir, { recursive: true });
   } catch (_) {
     // If dir doesn't exist yet, that's fine.
   }

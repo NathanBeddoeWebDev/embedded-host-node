@@ -1,18 +1,19 @@
-import { ImporterRegistry } from './importer-registry';
-import { CompilerType } from './types/compiler';
-import { CompileResult, Options } from './vendor/sass';
-import * as proto from './vendor/embedded-protocol/embedded_sass_pb';
-import * as utils from './utils';
-import { SyncEmbeddedProcess } from './sync-process';
-import Compiler from './compiler';
-import { FunctionRegistry } from './function-registry';
+import { ImporterRegistry } from '../importer-registry';
+import { CompilerType } from '../types/compiler';
+import { CompileResult, Options, SourceSpan } from '../vendor/sass';
+import * as proto from '../vendor/embedded-protocol/embedded_sass_pb';
+import * as utils from '../utils';
+import { SyncEmbeddedProcess } from '../sync-process';
+import { Compiler } from './compiler';
+import { FunctionRegistry } from '../function-registry';
 import { Observable } from 'rxjs';
-import { DispatcherHandlers, Dispatcher } from './dispatcher';
-import { MessageTransformer } from './message-transformer';
-import { PacketTransformer } from './packet-transformer';
-import { Exception } from './exception';
+import { DispatcherHandlers, Dispatcher } from '../dispatcher';
+import { MessageTransformer } from '../message-transformer';
+import { PacketTransformer } from '../packet-transformer';
+import { Exception } from '../exception';
+import { deprotofySourceSpan } from '../deprotofy-span';
 
-export default class CompileRequest<T extends CompilerType> {
+export class Compilation<T extends CompilerType> {
   compileResult?: CompileResult;
   constructor(
     compilerType: CompilerType,
@@ -47,14 +48,14 @@ export default class CompileRequest<T extends CompilerType> {
         embeddedCompiler.writeStdin(buffer);
       },
       {
-        handleImportRequest: request => importers.import(request),
-        handleFileImportRequest: request => importers.fileImport(request),
-        handleCanonicalizeRequest: request => importers.canonicalize(request),
-        handleFunctionCallRequest: request => functions.call(request),
+        handleImportRequest: request => importers.import(request) as proto.InboundMessage.ImportResponse,
+        handleFileImportRequest: request => importers.fileImport(request) as proto.InboundMessage.FileImportResponse,
+        handleCanonicalizeRequest: request => importers.canonicalize(request) as proto.InboundMessage.CanonicalizeResponse,
+        handleFunctionCallRequest: request => functions.call(request) as proto.InboundMessage.FunctionCallResponse,
       }
     );
 
-    dispatcher.logEvents$.subscribe(event => handleLogEvent(options, event));
+    dispatcher.logEvents$.subscribe(event => this.handleLogEvent(options, event));
 
     let error: unknown;
     let response: proto.OutboundMessage.CompileResponse | undefined;
@@ -116,6 +117,39 @@ export default class CompileRequest<T extends CompilerType> {
       throw new Exception(response.getFailure()!);
     } else {
       throw utils.compilerError('Compiler sent empty CompileResponse.');
+    }
+  }
+
+  private handleLogEvent(
+    options: Options<CompilerType> | undefined,
+    event: proto.OutboundMessage.LogEvent
+  ): void {
+    if (event.getType() === proto.LogEventType.DEBUG) {
+      if (options?.logger?.debug) {
+        options.logger.debug(event.getMessage(), {
+          span: deprotofySourceSpan(event.getSpan()!),
+        });
+      } else {
+        console.error(event.getFormatted());
+      }
+    } else {
+      if (options?.logger?.warn) {
+        const params: { deprecation: boolean; span?: SourceSpan; stack?: string } =
+        {
+          deprecation:
+            event.getType() === proto.LogEventType.DEPRECATION_WARNING,
+        };
+
+        const spanProto = event.getSpan();
+        if (spanProto) params.span = deprotofySourceSpan(spanProto);
+
+        const stack = event.getStackTrace();
+        if (stack) params.stack = stack;
+
+        options.logger.warn(event.getMessage(), params);
+      } else {
+        console.error(event.getFormatted());
+      }
     }
   }
 }

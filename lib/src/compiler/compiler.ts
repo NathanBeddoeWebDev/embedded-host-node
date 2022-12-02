@@ -1,21 +1,24 @@
-import {AsyncEmbeddedProcess} from './async-process';
-import {CompilePathRequest} from './CompilePathRequest';
-import {ImporterRegistry} from './importer-registry';
-import {SyncEmbeddedProcess} from './sync-process';
-import {CompilerType, IEmbeddedProcess} from './types/compiler';
-import {CompileResult, Options} from './vendor/sass';
-import * as proto from './vendor/embedded-protocol/embedded_sass_pb';
+import { AsyncEmbeddedProcess } from '../async-process';
+import { ImporterRegistry } from '../importer-registry';
+import { SyncEmbeddedProcess } from '../sync-process';
+import { CompilerType, IEmbeddedProcess } from '../types/compiler';
+import { CompileResult, Options } from '../vendor/sass';
+import * as proto from '../vendor/embedded-protocol/embedded_sass_pb';
 import * as supportsColor from 'supports-color';
+import { Compilation } from './Compilation';
 
-export default class Compiler<T extends CompilerType> {
+export class Compiler<T extends CompilerType> {
   public process: IEmbeddedProcess;
+  compilerType: CompilerType;
 
   constructor(compilerType: T) {
     switch (compilerType) {
       case CompilerType.ASYNC:
+        this.compilerType = compilerType;
         this.process = new AsyncEmbeddedProcess();
         break;
       case CompilerType.SYNC:
+        this.compilerType = compilerType;
         this.process = new SyncEmbeddedProcess();
         break;
       default:
@@ -23,13 +26,14 @@ export default class Compiler<T extends CompilerType> {
     }
   }
 
-  compile(path: string, options?: Options<CompilerType.SYNC>): CompileResult {
+  compile(path: string, options?: Options<T>): CompileResult {
     const importers = new ImporterRegistry(options);
-    return compileRequestSync(
-      new CompilePathRequest(path, importers, options),
-      importers,
-      options
-    );
+    const compileRequest = this.newCompileRequest(importers, options);
+    compileRequest.setPath(path);
+
+    const compilation = new Compilation(this.compilerType, compileRequest, importers, options);
+
+    return compilation.compileResult!;
   }
 
   newCompileRequest(
