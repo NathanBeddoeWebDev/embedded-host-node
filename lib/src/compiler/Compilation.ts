@@ -1,10 +1,9 @@
 import { ImporterRegistry } from '../importer-registry';
-import { CompilerType } from '../types/compiler';
+import { CompilerType, IEmbeddedProcess } from './Compiler';
 import { CompileResult, Options, SourceSpan } from '../vendor/sass';
 import * as proto from '../vendor/embedded-protocol/embedded_sass_pb';
 import * as utils from '../utils';
 import { SyncEmbeddedProcess } from '../sync-process';
-import { Compiler } from './compiler';
 import { FunctionRegistry } from '../function-registry';
 import { Observable } from 'rxjs';
 import { DispatcherHandlers, Dispatcher } from '../dispatcher';
@@ -12,20 +11,25 @@ import { MessageTransformer } from '../message-transformer';
 import { PacketTransformer } from '../packet-transformer';
 import { Exception } from '../exception';
 import { deprotofySourceSpan } from '../deprotofy-span';
+import { AsyncEmbeddedProcess } from '../async-process';
 
 export class Compilation<T extends CompilerType> {
   compileResult?: CompileResult;
+  process: IEmbeddedProcess;
   constructor(
     compilerType: CompilerType,
+    process: IEmbeddedProcess,
     request: proto.InboundMessage.CompileRequest,
     importers: ImporterRegistry<T>,
     options?: Options<T>
   ) {
     switch (compilerType) {
       case CompilerType.ASYNC:
+        this.process = process as AsyncEmbeddedProcess;
         this.async(request, importers, options);
         break;
       case CompilerType.SYNC:
+        this.process = process as SyncEmbeddedProcess;
         this.sync(request, importers, options);
         break;
       default:
@@ -39,13 +43,10 @@ export class Compilation<T extends CompilerType> {
     options?: Options<T>
   ) {
     const functions = new FunctionRegistry(options?.functions);
-    const embeddedCompiler = new Compiler(CompilerType.SYNC)
-      .process as SyncEmbeddedProcess;
-
     const dispatcher = this.createDispatcher<CompilerType.SYNC>(
-      embeddedCompiler.stdout$,
+      this.process.stdout$,
       buffer => {
-        embeddedCompiler.writeStdin(buffer);
+        this.process.writeStdin(buffer);
       },
       {
         handleImportRequest: request => importers.import(request) as proto.InboundMessage.ImportResponse,
@@ -67,7 +68,7 @@ export class Compilation<T extends CompilerType> {
       }
     });
 
-    while (embeddedCompiler.yield()) {
+    while ((this.process as SyncEmbeddedProcess).yield()) {
       if (error) throw error;
       if (response) return this.handleCompileResponse(response);
     }
@@ -75,11 +76,41 @@ export class Compilation<T extends CompilerType> {
     throw utils.compilerError('Embedded compiler exited unexpectedly.');
   }
 
-  private async(
+  private async async(
     request: proto.InboundMessage.CompileRequest,
     importers: ImporterRegistry<T>,
     options?: Options<T>
-  ) { }
+  ): Promise<CompileResult> {
+    const functions = new FunctionRegistry(options?.functions);
+
+    const dispatcher = this.createDispatcher<CompilerType.ASYNC>(
+      this.process.stdout$,
+      buffer => {
+        this.process.writeStdin(buffer);
+      },
+      {
+        handleImportRequest: request => importers.import(request),
+        handleFileImportRequest: request => importers.fileImport(request),
+        handleCanonicalizeRequest: request => importers.canonicalize(request),
+        handleFunctionCallRequest: request => functions.call(request),
+      }
+    );
+
+    dispatcher.logEvents$.subscribe(event => this.handleLogEvent(options, event));
+
+    return this.handleCompileResponse(
+      await new Promise<proto.OutboundMessage.CompileResponse>(
+        (resolve, reject) =>
+          dispatcher.sendCompileRequest(request, (err, response) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(response!);
+            }
+          })
+      )
+    );
+  }
 
   private createDispatcher<T extends CompilerType>(
     stdout: Observable<Buffer>,

@@ -2,12 +2,12 @@
 // MIT-style license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-import {spawn} from 'child_process';
-import {Observable} from 'rxjs';
-import {takeUntil} from 'rxjs/operators';
+import { spawn } from 'child_process';
+import { Observable } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
-import {compilerPath} from './compiler-path';
-import {IEmbeddedProcess} from './types/compiler';
+import { compilerPath } from './compiler-path';
+import { IEmbeddedProcess } from './compiler';
 
 /**
  * An asynchronous wrapper for the embedded Sass compiler that exposes its stdio
@@ -15,7 +15,7 @@ import {IEmbeddedProcess} from './types/compiler';
  */
 export class AsyncEmbeddedProcess implements IEmbeddedProcess {
   /** The underlying process that's being wrapped. */
-  private readonly process = spawn(compilerPath, {windowsHide: true});
+  private readonly process = spawn(compilerPath, { windowsHide: true });
 
   /** The child process's exit event. */
   readonly exit$ = new Promise<number | null>(resolve => {

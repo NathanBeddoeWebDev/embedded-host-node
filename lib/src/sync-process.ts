@@ -2,11 +2,11 @@
 // MIT-style license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-import {Subject} from 'rxjs';
+import { Subject } from 'rxjs';
 
-import {SyncProcess} from './sync-process/index';
-import {compilerPath} from './compiler-path';
-import {IEmbeddedProcess} from './types/compiler';
+import { SyncProcess } from './sync-process/index';
+import { compilerPath } from './compiler-path';
+import { IEmbeddedProcess } from './compiler';
 
 /**
  * A synchronous wrapper for the embedded Sass compiler that exposes its stdio
@@ -14,7 +14,7 @@ import {IEmbeddedProcess} from './types/compiler';
  */
 export class SyncEmbeddedProcess implements IEmbeddedProcess {
   /** The underlying process that's being wrapped. */
-  private readonly process = new SyncProcess(compilerPath, {windowsHide: true});
+  private readonly process = new SyncProcess(compilerPath, { windowsHide: true });
 
   /** The buffers emitted by the child process's stdout. */
   readonly stdout$ = new Subject<Buffer>();

@@ -1,1 +1,1 @@
-export { Compiler } from './compiler'
+export { Compiler, ICompiler, IEmbeddedProcess, CompilerType } from './Compiler'

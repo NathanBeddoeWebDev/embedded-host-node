@@ -17,8 +17,7 @@ import { MessageTransformer } from './message-transformer';
 import { PacketTransformer } from './packet-transformer';
 import { deprotofySourceSpan } from './deprotofy-span';
 import { legacyImporterProtocol } from './legacy/importer';
-import { CompilerType } from './types/compiler';
-import { Compiler } from './compiler/compiler';
+import { Compiler, CompilerType } from './compiler/Compiler';
 import { AsyncEmbeddedProcess } from './async-process';
 import { SyncEmbeddedProcess } from './sync-process';
 
@@ -154,7 +153,7 @@ async function compileRequestAsync(
 ): Promise<CompileResult> {
   const functions = new FunctionRegistry(options?.functions);
   const embeddedCompiler = new Compiler(CompilerType.ASYNC)
-    .process as AsyncEmbeddedProcess;
+    .compiler as AsyncEmbeddedProcess;
 
   const dispatcher = createDispatcher<CompilerType.ASYNC>(
     embeddedCompiler.stdout$,
@@ -195,7 +194,7 @@ function compileRequestSync(
 ): CompileResult {
   const functions = new FunctionRegistry(options?.functions);
   const embeddedCompiler = new Compiler(CompilerType.SYNC)
-    .process as SyncEmbeddedProcess;
+    .compiler as SyncEmbeddedProcess;
 
   const dispatcher = createDispatcher<CompilerType.SYNC>(
     embeddedCompiler.stdout$,

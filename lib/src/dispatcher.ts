@@ -2,8 +2,8 @@
 // MIT-style license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-import {Observable, Subject} from 'rxjs';
-import {filter, map, mergeMap} from 'rxjs/operators';
+import { Observable, Subject } from 'rxjs';
+import { filter, map, mergeMap } from 'rxjs/operators';
 
 import {
   InboundMessage,
@@ -19,9 +19,9 @@ import {
   OutboundResponseType,
   OutboundTypedMessage,
 } from './message-transformer';
-import {RequestTracker} from './request-tracker';
-import {PromiseOr, thenOr} from './utils';
-import {CompilerType} from './types/compiler';
+import { RequestTracker } from './request-tracker';
+import { PromiseOr, thenOr } from './utils';
+import { CompilerType } from './compiler';
 
 /**
  * Dispatches requests, responses, and events.
@@ -228,9 +228,9 @@ export class Dispatcher<sync extends CompilerType> {
         map(message => message.payload as OutboundResponse),
         filter(response => response.getId() === request.getId())
       )
-      .subscribe({next: response => callback(null, response)});
+      .subscribe({ next: response => callback(null, response) });
 
-    this.error$.subscribe({error: error => callback(error, undefined)});
+    this.error$.subscribe({ error: error => callback(error, undefined) });
 
     try {
       this.sendInboundMessage(
