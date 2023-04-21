@@ -16,7 +16,7 @@ import {FunctionRegistry} from './function-registry';
 import {ImporterRegistry} from './importer-registry';
 import {MessageTransformer} from './message-transformer';
 import {PacketTransformer} from './packet-transformer';
-import {SyncEmbeddedCompiler} from './sync-compiler';
+import {SyncEmbeddedProcess} from './sync-embedded-process';
 import {deprotofySourceSpan} from './deprotofy-span';
 import {legacyImporterProtocol} from './legacy/importer';
 
@@ -200,7 +200,7 @@ function compileRequestSync(
   options?: Options<'sync'>
 ): CompileResult {
   const functions = new FunctionRegistry(options?.functions);
-  const embeddedCompiler = new SyncEmbeddedCompiler();
+  const embeddedCompiler = new SyncEmbeddedProcess();
   embeddedCompiler.stderr$.subscribe(data => process.stderr.write(data));
 
   try {

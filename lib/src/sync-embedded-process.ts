@@ -11,7 +11,7 @@ import {compilerCommand} from './compiler-path';
  * A synchronous wrapper for the embedded Sass compiler that exposes its stdio
  * streams as Observables.
  */
-export class SyncEmbeddedCompiler {
+export class SyncEmbeddedProcess {
   /** The underlying process that's being wrapped. */
   private readonly process = new SyncProcess(
     compilerCommand[0],
@@ -62,3 +62,5 @@ export class SyncEmbeddedCompiler {
     this.process.stdin.end();
   }
 }
+
+export default new SyncEmbeddedProcess();

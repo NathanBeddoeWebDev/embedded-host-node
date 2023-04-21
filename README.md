@@ -14,6 +14,11 @@ Despite being different packages, both `sass` and `sass-embedded` are considered
 stable release of the `sass-embedded` package, both packages are released at the
 same time and share the same version number.
 
+### Long lived processes
+With this fork, we have changed the compilers to use single, long living dart processes. 
+This greatly reduces compilation time, due to previously, every single entry point
+was starting and closing a dart process, which took time.
+
 ## Usage
 
 This package provides the same JavaScript API as the `sass` package, and can be
