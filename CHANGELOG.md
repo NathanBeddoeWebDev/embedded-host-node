@@ -1,3 +1,310 @@
+## 1.69.3
+
+### Embedded Sass
+
+* Fix TypeScript type locations in `package.json`.
+
+## 1.69.2
+
+### JS API
+
+* Fix a bug where Sass crashed when running in the browser if there was a global
+  variable named `process`.
+
+## 1.69.1
+
+* No user-visible changes.
+
+## 1.69.0
+
+* Add a `meta.get-mixin()` function that returns a mixin as a first-class Sass
+  value.
+
+* Add a `meta.apply()` mixin that includes a mixin value.
+
+* Add a `meta.module-mixins()` function which returns a map from mixin names in
+  a module to the first-class mixins that belong to those names.
+
+* Add a `meta.accepts-content()` function which returns whether or not a mixin
+  value can take a content block.
+
+* Add support for the relative color syntax from CSS Color 5. This syntax
+  cannot be used to create Sass color values. It is always emitted as-is in the
+  CSS output.
+
+### Dart API
+
+* Deprecate `Deprecation.calcInterp` since it was never actually emitted as a
+  deprecation.
+
+### Embedded Sass
+
+* Fix a rare race condition where the embedded compiler could freeze when a
+  protocol error was immediately followed by another request.
+
+## 1.68.0
+
+* Fix the source spans associated with the `abs-percent` deprecation.
+
+### JS API
+
+* Non-filesystem importers can now set the `nonCanonicalScheme` field, which
+  declares that one or more URL schemes (without `:`) will never be used for
+  URLs returned by the `canonicalize()` method.
+
+* Add a `containingUrl` field to the `canonicalize()` and `findFileUrl()`
+  methods of importers, which is set to the canonical URL of the stylesheet that
+  contains the current load. For filesystem importers, this is always set; for
+  other importers, it's set only if the current load has no URL scheme, or if
+  its URL scheme is declared as non-canonical by the importer.
+
+### Dart API
+
+* Add `AsyncImporter.isNonCanonicalScheme`, which importers (async or sync) can
+  use to indicate that a certain URL scheme will never be used for URLs returned
+  by the `canonicalize()` method.
+
+* Add `AsyncImporter.containingUrl`, which is set during calls to the
+  `canonicalize()` method to the canonical URL of the stylesheet that contains
+  the current load. This is set only if the current load has no URL scheme, or
+  if its URL scheme is declared as non-canonical by the importer.
+
+### Embedded Sass
+
+* The `CalculationValue.interpolation` field is deprecated and will be removed
+  in a future version. It will no longer be set by the compiler, and if the host
+  sets it it will be treated as equivalent to `CalculationValue.string` except
+  that `"("` and `")"` will be added to the beginning and end of the string
+  values.
+
+* Properly include TypeScript types in the `sass-embedded` package.
+
+## 1.67.0
+
+* All functions defined in CSS Values and Units 4 are now once again parsed as
+  calculation objects: `round()`, `mod()`, `rem()`, `sin()`, `cos()`, `tan()`,
+  `asin()`, `acos()`, `atan()`, `atan2()`, `pow()`, `sqrt()`, `hypot()`,
+  `log()`, `exp()`, `abs()`, and `sign()`.
+
+  Unlike in 1.65.0, function calls are _not_ locked into being parsed as
+  calculations or plain Sass functions at parse-time. This means that
+  user-defined functions will take precedence over CSS calculations of the same
+  name. Although the function names `calc()` and `clamp()` are still forbidden,
+  users may continue to freely define functions whose names overlap with other
+  CSS calculations (including `abs()`, `min()`, `max()`, and `round()` whose
+  names overlap with global Sass functions).
+
+* **Breaking change**: As a consequence of the change in calculation parsing
+  described above, calculation functions containing interpolation are now parsed
+  more strictly than before. However, _almost_ all interpolations that would
+  have produced valid CSS will continue to work. The only exception is
+  `#{$variable}%` which is not valid in Sass and is no longer valid in
+  calculations. Instead of this, either use `$variable` directly and ensure it
+  already has the `%` unit, or write `($variable * 1%)`.
+
+* **Potentially breaking bug fix**: The importer used to load a given file is no
+  longer used to load absolute URLs that appear in that file. This was
+  unintented behavior that contradicted the Sass specification. Absolute URLs
+  will now correctly be loaded only from the global importer list. This applies
+  to the modern JS API, the Dart API, and the embedded protocol.
+
+### Embedded Sass
+
+* Substantially improve the embedded compiler's performance when compiling many
+  files or files that require many importer or function call round-trips with
+  the embedded host.
+
+## 1.66.1
+
+### JS API
+
+* Fix a bug where Sass compilation could crash in strict mode if passed a
+  callback that threw a string, boolean, number, symbol, or bignum.
+
+## 1.66.0
+
+* **Breaking change:** Drop support for the additional CSS calculations defined
+  in CSS Values and Units 4. Custom Sass functions whose names overlapped with
+  these new CSS functions were being parsed as CSS calculations instead, causing
+  an unintentional breaking change outside our normal [compatibility policy] for
+  CSS compatibility changes.
+
+  Support will be added again in a future version, but only after Sass has
+  emitted a deprecation warning for all functions that will break for at least
+  three months prior to the breakage.
+
+## 1.65.1
+
+* Update abs-percent deprecatedIn version to `1.65.0`.
+
+## 1.65.0
+
+* All functions defined in CSS Values and Units 4 are now parsed as calculation
+  objects: `round()`, `mod()`, `rem()`, `sin()`, `cos()`, `tan()`, `asin()`,
+  `acos()`, `atan()`, `atan2()`, `pow()`, `sqrt()`, `hypot()`, `log()`, `exp()`,
+  `abs()`, and `sign()`.
+
+* Deprecate explicitly passing the `%` unit to the global `abs()` function. In
+  future releases, this will emit a CSS abs() function to be resolved by the
+  browser. This deprecation is named `abs-percent`.
+
+## 1.64.3
+
+### Dart API
+
+* Deprecate explicitly passing `null` as the alpha channel for
+  `SassColor.rgb()`, `SassColor.hsl()`, and `SassColor.hwb()`. Omitting the
+  `alpha` channel is still allowed. In future releases, `null` will be used to
+  indicate a [missing component]. This deprecation is named `null-alpha`.
+
+  [missing component]: https://developer.mozilla.org/en-US/docs/Web/CSS/color_value#missing_color_components
+
+* Include protocol buffer definitions when uploading the `sass` package to pub.
+
+### JS API
+
+* Deprecate explicitly passing `null` as the alpha channel for `new
+  SassColor()`. Omitting the `alpha` channel or passing `undefined` for it is
+  still allowed. In future releases, `null` will be used to indicate a [missing
+  component]. This deprecation is named `null-alpha`.
+
+  [missing component]: https://developer.mozilla.org/en-US/docs/Web/CSS/color_value#missing_color_components
+
+  (Note that this was already prohibited by the TypeScript types, but in
+  practice prior to this `null` was treated as `1`.)
+
+## 1.64.2
+
+* No user-visible changes.
+
+## 1.64.1
+
+### Embedded Sass
+
+* Fix a bug where a valid `SassCalculation.clamp()` with less than 3 arguments
+  would throw an error.
+
+## 1.64.0
+
+* Comments that appear before or between `@use` and `@forward` rules are now
+  emitted in source order as much as possible, instead of always being emitted
+  after the CSS of all module dependencies.
+
+* Fix a bug where an interpolation in a custom property name crashed if the file
+  was loaded by a `@use` nested in an `@import`.
+
+### JavaScript API
+
+* Add a new `SassCalculation` type that represents the calculation objects added
+  in Dart Sass 1.40.0.
+
+* Add `Value.assertCalculation()`, which returns the value if it's a
+  `SassCalculation` and throws an error otherwise.
+
+* Produce a better error message when an environment that supports some Node.js
+  APIs loads the browser entrypoint but attempts to access the filesystem.
+
+### Embedded Sass
+
+* Fix a bug where nested relative `@imports` failed to load when using the
+  deprecated functions `render` or `renderSync` and those relative imports were
+  loaded multiple times across different files.
+
+## 1.63.6
+
+### JavaScript API
+
+* Fix `import sass from 'sass'` again after it was broken in the last release.
+
+### Embedded Sass
+
+* Fix the `exports` declaration in `package.json`.
+
+## 1.63.5
+
+### JavaScript API
+
+* Fix a bug where loading the package through both CJS `require()` and ESM
+  `import` could crash on Node.js.
+
+### Embedded Sass
+
+* Fix a deadlock when running at high concurrency on 32-bit systems.
+
+* Fix a race condition where the embedded compiler could deadlock or crash if a
+  compilation ID was reused immediately after the compilation completed.
+
+## 1.63.4
+
+### JavaScript API
+
+* Re-enable support for `import sass from 'sass'` when loading the package from
+  an ESM module in Node.js. However, this syntax is now deprecated; ESM users
+  should use `import * as sass from 'sass'` instead.
+
+  On the browser and other ESM-only platforms, only `import * as sass from
+  'sass'` is supported.
+
+* Properly export the legacy API values `TRUE`, `FALSE`, `NULL`, and `types` from
+  the ECMAScript module API.
+
+### Embedded Sass
+
+* Fix a race condition where closing standard input while requests are in-flight
+  could sometimes cause the process to hang rather than shutting down
+  gracefully.
+
+* Properly include the root stylesheet's URL in the set of loaded URLs when it
+  fails to parse.
+
+## 1.63.3
+
+### JavaScript API
+
+* Fix loading Sass as an ECMAScript module on Node.js.
+
+## 1.63.2
+
+* No user-visible changes.
+
+## 1.63.1
+
+* No user-visible changes.
+
+## 1.63.0
+
+### JavaScript API
+
+* Dart Sass's JS API now supports running in the browser. Further details and
+  instructions for use are in [the README](README.md#dart-sass-in-the-browser).
+
+### Embedded Sass
+
+* The Dart Sass embedded compiler is now included as part of the primary Dart
+  Sass distribution, rather than a separate executable. To use the embedded
+  compiler, just run `sass --embedded` from any Sass executable (other than the
+  pure JS executable).
+
+  The Node.js embedded host will still be distributed as the `sass-embedded`
+  package on npm. The only change is that it will now provide direct access to a
+  `sass` executable with the same CLI as the `sass` package.
+
+* The Dart Sass embedded compiler now uses version 2.0.0 of the Sass embedded
+  protocol. See [the spec][embedded-protocol-spec] for a full description of the
+  protocol, and [the changelog][embedded-protocol-changelog] for a summary of
+  changes since version 1.2.0.
+
+  [embedded-protocol-spec]: https://github.com/sass/sass/blob/main/spec/embedded-protocol.md
+  [embedded-protocol-changelog]: https://github.com/sass/sass/blob/main/EMBEDDED_PROTOCOL_CHANGELOG.md
+
+* The Dart Sass embedded compiler now runs multiple simultaneous compilations in
+  parallel, rather than serially.
+
+## 1.62.1
+
+* Fix a bug where `:has(+ &)` and related constructs would drop the leading
+  combinator.
+
 ## 1.62.0
 
 * Deprecate the use of multiple `!global` or `!default` flags on the same

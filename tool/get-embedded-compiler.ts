@@ -2,15 +2,13 @@
 // MIT-style license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-import {promises as fs} from 'fs';
 import * as p from 'path';
-import * as yaml from 'yaml';
 import * as shell from 'shelljs';
 
 import * as utils from './utils';
 
 /**
- * Downlaods and builds the Embedded Dart Sass compiler.
+ * Downloads and builds the Embedded Dart Sass compiler.
  *
  * Can check out and build the source from a Git `ref` or build from the source
  * at `path`. By default, checks out the latest revision from GitHub.
@@ -19,7 +17,7 @@ export async function getEmbeddedCompiler(
   outPath: string,
   options?: {ref: string} | {path: string}
 ): Promise<void> {
-  const repo = 'dart-sass-embedded';
+  const repo = 'dart-sass';
 
   let source: string;
   if (!options || 'ref' in options) {
@@ -29,48 +27,35 @@ export async function getEmbeddedCompiler(
       ref: options?.ref ?? 'main',
     });
     source = p.join('build', repo);
-    await maybeOverrideSassDependency(source);
   } else {
     source = options.path;
+  }
+
+  // Make sure the compiler sees the same version of the language repo that the
+  // host is using, but if they're already the same directory (as in the Dart
+  // Sass CI environment) we don't need to do anything.
+  const languageInHost = p.resolve('build/sass');
+  const languageInCompiler = p.resolve(p.join(source, 'build/language'));
+  if (!(await utils.sameTarget(languageInHost, languageInCompiler))) {
+    await utils.cleanDir(languageInCompiler);
+    await utils.link(languageInHost, languageInCompiler);
   }
 
   buildDartSassEmbedded(source);
   await utils.link(p.join(source, 'build'), p.join(outPath, repo));
 }
 
-/**
- * Overrides Embedded Dart Sass compiler's dependency on Dart Sass to use the
- * latest version of Dart Sass from the `main` branch.
- *
- * This allows us to avoid needing to commit a dependency override to the
- * embedded compiler when it doesn't actually require any local changes.
- */
-async function maybeOverrideSassDependency(repo: string): Promise<void> {
-  const pubspecPath = p.join(repo, 'pubspec.yaml');
-  const pubspec = yaml.parse(
-    await fs.readFile(pubspecPath, {encoding: 'utf-8'})
-  );
-
-  console.log(`Overriding ${repo} to load Dart Sass from HEAD.`);
-
-  pubspec['dependency_overrides'] = {
-    ...pubspec['dependency_overrides'],
-    sass: {git: 'https://github.com/sass/dart-sass.git'},
-  };
-  await fs.writeFile(pubspecPath, yaml.stringify(pubspec), {encoding: 'utf-8'});
-}
-
 // Builds the Embedded Dart Sass executable from the source at `repoPath`.
 function buildDartSassEmbedded(repoPath: string): void {
-  console.log('Downloading dart-sass-embedded dependencies.');
+  console.log("Downloading Dart Sass's dependencies.");
   shell.exec('dart pub upgrade', {
     cwd: repoPath,
     silent: true,
   });
 
-  console.log('Building dart-sass-embedded executable.');
+  console.log('Building the Dart Sass executable.');
   shell.exec('dart run grinder protobuf pkg-standalone-dev', {
     cwd: repoPath,
-    silent: true,
+    env: {...process.env, UPDATE_SASS_PROTOCOL: 'false'},
   });
 }

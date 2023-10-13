@@ -12,10 +12,17 @@ export {sassFalse, sassTrue} from './src/value/boolean';
 export {SassColor} from './src/value/color';
 export {SassFunction} from './src/value/function';
 export {SassMap} from './src/value/map';
+export {SassMixin} from './src/value/mixin';
 export {SassNumber} from './src/value/number';
 export {SassString} from './src/value/string';
 export {Value} from './src/value';
 export {sassNull} from './src/value/null';
+export {
+  CalculationOperation,
+  CalculationOperator,
+  CalculationInterpolation,
+  SassCalculation,
+} from './src/value/calculations';
 
 export * as types from './src/legacy/value';
 export {Exception} from './src/exception';

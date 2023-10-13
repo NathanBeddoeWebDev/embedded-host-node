@@ -11,6 +11,8 @@ import {SassMap} from './map';
 import {SassNumber} from './number';
 import {SassString} from './string';
 import {valueError} from '../utils';
+import {SassCalculation} from './calculations';
+import {SassMixin} from './mixin';
 
 /**
  * A SassScript value.
@@ -107,6 +109,16 @@ export abstract class Value implements ValueObject {
   }
 
   /**
+   * Casts `this` to `SassCalculation`; throws if `this` isn't a calculation.
+   *
+   * If `this` came from a function argument, `name` is the argument name
+   * (without the `$`) and is used for error reporting.
+   */
+  assertCalculation(name?: string): SassCalculation {
+    throw valueError(`${this} is not a calculation`, name);
+  }
+
+  /**
    * Casts `this` to `SassColor`; throws if `this` isn't a color.
    *
    * If `this` came from a function argument, `name` is the argument name
@@ -126,6 +138,17 @@ export abstract class Value implements ValueObject {
   assertFunction(name?: string): Value {
     throw valueError(`${this} is not a function reference`, name);
     // TODO(awjin): Narrow the return type to SassFunction.
+  }
+
+  /**
+   * Casts `this` to `SassMixin`; throws if `this` isn't a mixin
+   * reference.
+   *
+   * If `this` came from a function argument, `name` is the argument name
+   * (without the `$`) and is used for error reporting.
+   */
+  assertMixin(name?: string): SassMixin {
+    throw valueError(`${this} is not a mixin reference`, name);
   }
 
   /**

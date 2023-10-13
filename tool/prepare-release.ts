@@ -6,19 +6,21 @@ import {promises as fs} from 'fs';
 import * as shell from 'shelljs';
 
 import * as pkg from '../package.json';
-import {getEmbeddedProtocol} from './get-embedded-protocol';
-import {getJSApi} from './get-js-api';
+import {getLanguageRepo} from './get-language-repo';
 
-(async () => {
+void (async () => {
   try {
     await sanityCheckBeforeRelease();
 
-    await getEmbeddedProtocol('lib/src/vendor');
-
-    await getJSApi('lib/src/vendor');
+    await getLanguageRepo('lib/src/vendor');
 
     console.log('Transpiling TS into dist.');
-    shell.exec('tsc');
+    shell.exec('tsc -p tsconfig.build.json');
+    shell.cp('lib/index.mjs', 'dist/lib/index.mjs');
+    shell.cp(
+      'dist/lib/src/vendor/sass/index.d.ts',
+      'dist/lib/src/vendor/sass/index.m.d.ts'
+    );
 
     console.log('Copying JS API types to dist.');
     shell.cp('-R', 'lib/src/vendor/sass', 'dist/types');
