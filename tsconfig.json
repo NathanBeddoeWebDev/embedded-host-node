@@ -11,8 +11,10 @@
     "lib": ["DOM"]
   },
   "include": [
+    "*.ts",
     "lib/**/*.ts",
-    "tool/*.ts"
+    "tool/**/*.ts",
+    "test/**/*.ts"
   ],
-  "exclude": ["**/*.test.ts"]
+  "exclude": ["lib/src/vendor/dart-sass/**"]
 }
